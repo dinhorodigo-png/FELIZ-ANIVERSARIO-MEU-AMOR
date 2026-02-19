@@ -1,16 +1,15 @@
 // ==============================
 // ✍️ EDITE AQUI (opcional):
-// Se você tiver um MP3, coloque ele na pasta e troque o nome abaixo.
+// Coloque um MP3 na pasta e escreva o nome aqui.
 // Ex.: const MUSIC_FILE = "musica.mp3";
+// Se não quiser música, deixe "".
 // ==============================
-const MUSIC_FILE = ""; // "" = sem música
+const MUSIC_FILE = ""; // ex: "musica.mp3"
 
-// Dicas de edição rápida (textos):
-// - No HTML, procure por "✍️ EDITE AQUI".
-// - Você também pode editar via JS se quiser, mas não precisa.
+// Util
+const $ = (s) => document.querySelector(s);
 
-const $ = (sel) => document.querySelector(sel);
-
+// ===== Modais Surpresa / Carta =====
 const modalSurpresa = $("#modalSurpresa");
 const modalCarta = $("#modalCarta");
 
@@ -20,18 +19,18 @@ $("#fecharSurpresa").addEventListener("click", () => modalSurpresa.close());
 $("#btnCarta").addEventListener("click", () => modalCarta.showModal());
 $("#fecharCarta").addEventListener("click", () => modalCarta.close());
 
-// Fechar modal clicando fora do conteúdo
+// fechar modal clicando fora do conteúdo
 [modalSurpresa, modalCarta].forEach((dlg) => {
   dlg.addEventListener("click", (e) => {
     const rect = dlg.getBoundingClientRect();
-    const clickedInside =
+    const inside =
       e.clientX >= rect.left && e.clientX <= rect.right &&
       e.clientY >= rect.top && e.clientY <= rect.bottom;
-    if (!clickedInside) dlg.close();
+    if (!inside) dlg.close();
   });
 });
 
-// "Outra surpresa" troca o texto (fofinho)
+// Outra surpresa (só troca texto)
 const frases = [
   "Você é meu pedacinho de paz 💗",
   "Seu sorriso melhora meu dia inteiro 😊",
@@ -42,35 +41,31 @@ const frases = [
 $("#btnOutro").addEventListener("click", () => {
   const el = $("#textoSurpresa");
   el.textContent = frases[Math.floor(Math.random() * frases.length)];
-  burstConfetti(140);
 });
 
-// Barra de amor animada
+// Barra de “amor” animada (não são partículas)
 const amorBar = $("#amorBar");
-let w = 65;
+let w = 78;
 setInterval(() => {
-  w += (Math.random() * 8 - 4);
-  w = Math.max(55, Math.min(98, w));
+  w += (Math.random() * 6 - 3);
+  w = Math.max(62, Math.min(98, w));
   amorBar.style.width = w.toFixed(0) + "%";
 }, 1200);
 
-// Música (opcional)
+// ===== Música (opcional) =====
 const musicBtn = $("#musicBtn");
 const music = $("#music");
 let musicOn = false;
+
+if (MUSIC_FILE) {
+  music.src = MUSIC_FILE;
+}
 
 function setMusicLabel(){
   musicBtn.textContent = musicOn ? "🎵 Música: ON" : "🎵 Música: OFF";
   musicBtn.setAttribute("aria-pressed", musicOn ? "true" : "false");
 }
-
-if (MUSIC_FILE) {
-  music.src = MUSIC_FILE;
-  musicBtn.style.display = "inline-flex";
-} else {
-  // se não tiver arquivo, deixa o botão visível mesmo (fica OFF)
-  musicBtn.style.display = "inline-flex";
-}
+setMusicLabel();
 
 musicBtn.addEventListener("click", async () => {
   if (!MUSIC_FILE) {
@@ -87,18 +82,55 @@ musicBtn.addEventListener("click", async () => {
     }
     setMusicLabel();
   } catch {
-    alert("Seu navegador bloqueou autoplay. Clique de novo 🙂");
+    alert("Seu navegador bloqueou a reprodução. Clique de novo 🙂");
   }
 });
-setMusicLabel();
+
+// ===== Lightbox da galeria =====
+const lightbox = $("#lightbox");
+const lbImg = $("#lbImg");
+const lbCaption = $("#lbCaption");
+const lbClose = $("#lbClose");
+
+// Ao abrir uma foto, se existir música, começa (uma vez)
+let startedGalleryMusic = false;
+
+document.querySelectorAll(".love-photo").forEach((card) => {
+  card.addEventListener("click", async () => {
+    const full = card.getAttribute("data-full");
+    const caption = card.getAttribute("data-caption") || "";
+
+    lbImg.src = full;
+    lbCaption.textContent = caption;
+    lightbox.showModal();
+
+    if (MUSIC_FILE && !startedGalleryMusic) {
+      try {
+        await music.play();
+        musicOn = true;
+        startedGalleryMusic = true;
+        setMusicLabel();
+      } catch {}
+    }
+  });
+});
+
+lbClose.addEventListener("click", () => lightbox.close());
+lightbox.addEventListener("click", (e) => {
+  const rect = lightbox.getBoundingClientRect();
+  const inside =
+    e.clientX >= rect.left && e.clientX <= rect.right &&
+    e.clientY >= rect.top && e.clientY <= rect.bottom;
+  if (!inside) lightbox.close();
+});
 
 // ==============================
-// CONFETTI (canvas) - simples e leve
+// 🌹 PÉTALAS CAINDO (SEM partículas por clique/mouse)
 // ==============================
-const canvas = $("#confetti");
+const canvas = $("#petals");
 const ctx = canvas.getContext("2d");
-let W, H;
 
+let W, H;
 function resize(){
   W = canvas.width = window.innerWidth * devicePixelRatio;
   H = canvas.height = window.innerHeight * devicePixelRatio;
@@ -108,74 +140,58 @@ function resize(){
 window.addEventListener("resize", resize);
 resize();
 
-const confetti = [];
-const emojis = ["🎊","✨","💖","🌈","🧁","💞","🎂","🌸"];
+const petals = [];
+const petalEmoji = ["🌹","🌸","❤️","💗"];
 
-function addPiece(x, y, big=false){
-  confetti.push({
+function addPetal(x, y){
+  petals.push({
     x, y,
-    vx: (Math.random()*2-1) * (big ? 3.6 : 2.3),
-    vy: (Math.random()*-3 - 2) * (big ? 1.2 : 1),
-    g: 0.09 + Math.random()*0.07,
-    r: Math.random()*Math.PI*2,
-    vr: (Math.random()*0.2-0.1),
-    s: (big ? 26 : 18) * devicePixelRatio,
-    t: 160 + Math.random()*40,
-    emoji: emojis[Math.floor(Math.random()*emojis.length)]
+    vx: (Math.random()*2 - 1) * 0.55 * devicePixelRatio,
+    vy: (Math.random()*1 + 0.8) * 0.9 * devicePixelRatio,
+    rot: Math.random()*Math.PI*2,
+    vr: (Math.random()*0.04 - 0.02),
+    s: (16 + Math.random()*10) * devicePixelRatio,
+    life: 320 + Math.random()*220,
+    emoji: petalEmoji[Math.floor(Math.random()*petalEmoji.length)]
   });
 }
 
-function burstConfetti(n=120){
-  const x = (window.innerWidth * 0.5) * devicePixelRatio;
-  const y = (window.innerHeight * 0.22) * devicePixelRatio;
-  for(let i=0;i<n;i++) addPiece(x, y, true);
+// Chuva contínua suave
+function petalRain(){
+  const amount = 2 + Math.floor(Math.random() * 2); // 2-3
+  for(let i=0;i<amount;i++){
+    const x = Math.random() * W;
+    const y = -30 * devicePixelRatio;
+    addPetal(x, y);
+  }
 }
 
 function loop(){
   ctx.clearRect(0,0,W,H);
 
-  for(let i=confetti.length-1;i>=0;i--){
-    const p = confetti[i];
-    p.vy += p.g;
+  // gera de forma constante e leve
+  petalRain();
+
+  for(let i=petals.length-1;i>=0;i--){
+    const p = petals[i];
     p.x += p.vx;
     p.y += p.vy;
-    p.r += p.vr;
-    p.t -= 1;
+    p.rot += p.vr;
+    p.life -= 1;
 
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.rotate(p.r);
+    ctx.rotate(p.rot);
     ctx.font = `${p.s}px "Fredoka", system-ui`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.globalAlpha = Math.max(0, Math.min(1, p.t/180));
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life/260));
     ctx.fillText(p.emoji, 0, 0);
     ctx.restore();
 
-    if (p.t <= 0 || p.y > H + 50) confetti.splice(i,1);
+    if (p.life <= 0 || p.y > H + 80*devicePixelRatio) petals.splice(i,1);
   }
 
   requestAnimationFrame(loop);
 }
 loop();
-
-// Soltar confete ao abrir
-window.addEventListener("load", () => burstConfetti(170));
-$("#btnCoracoes").addEventListener("click", () => burstConfetti(160));
-
-// Atalho: espaço = mais confete
-window.addEventListener("keydown", (e) => {
-  if (e.code === "Space") {
-    e.preventDefault();
-    burstConfetti(140);
-  }
-});
-
-// Confete ao clicar em qualquer lugar do site
-window.addEventListener("click", (e) => {
-  // evita “spam” quando clicar dentro do modal
-  if (modalSurpresa.open || modalCarta.open) return;
-  const x = e.clientX * devicePixelRatio;
-  const y = e.clientY * devicePixelRatio;
-  for (let i=0;i<30;i++) addPiece(x, y, false);
-});
